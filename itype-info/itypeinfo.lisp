@@ -1,0 +1,30 @@
+(in-package :cl-com)
+
+(defconstant iid-itypeinfo (make-guid-from-string "00020401-0000-0000-C000-000000000046"))
+
+(defcstruct itype-info-vtable
+  (query-interface :pointer)
+  (addref :pointer)
+  (release :pointer)
+  (get-type-attr :pointer)
+  (get-type-comp :pointer)
+  (get-func-desc :pointer)
+  (get-var-desc :pointer)
+  (get-names :pointer)
+  (get-ref-type-of-impl-type :pointer)
+  (get-impl-type-flags :pointer)
+  (get-ids-of-names :pointer)
+  (invoke :pointer)
+  (get-documentation :pointer)
+  (get-dll-entry :pointer)
+  (get-ref-type-info :pointer)
+  (address-of-member :pointer)
+  (create-instance :pointer)
+  (get-mops :pointer)
+  (get-containing-type-lib :pointer)
+  (release-type-attr :pointer)
+  (release-func-desc :pointer)
+  (release-var-desc :pointer))
+
+(defcstruct itype-info
+    (vtable (:pointer itype-info-vtable)))
