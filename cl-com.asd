@@ -12,4 +12,6 @@
   :components ((:file "cl-com")
 	       (:module win-common
 			:depends-on ("cl-com")
-			:components ((:file "hresult")))))
+			:components ((:file "hresult")
+				     (:file "hresult-funs"
+					    :depends-on "hresult")))))
