@@ -1,4 +1,4 @@
 (defpackage :cl-com
-  (:use :cl :cffi))
+  (:use :cl :cffi :iterate))
 
 (in-package :cl-com)

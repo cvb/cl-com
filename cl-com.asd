@@ -3,10 +3,13 @@
 
 (in-package #:cl-com-asd)
 
-(defsystem midl-lisp-generator
+(defsystem cl-com
   :name "midl-lisp-generator"
   :version "0.0.1"
   :author "Peter Goncharov"
   :license "GPL v3"
-  :depends-on (:cffi :cl-utilities)
-  :components ((:file "cl-com")))
+  :depends-on (:cffi :cl-utilities :iterate)
+  :components ((:file "cl-com")
+	       (:module win-common
+			:depends-on ("cl-com")
+			:components ((:file "hresult")))))
