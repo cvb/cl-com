@@ -1,4 +1,4 @@
-(in-package :midl-lisp-generator)
+(in-package :cl-com)
 
 (defctype hwnd :pointer)
 (defctype wparam :uint) ;looks like it should be pointer

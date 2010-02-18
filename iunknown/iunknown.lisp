@@ -15,20 +15,22 @@
   (release :pointer))
 
 (defcstruct %iunknown
-    (vtable (:pointer iunknown-vtable)))
+    (vtable (:pointer %iunknown-vtable)))
 
-(defclass iunknown
-    (this :initarg :this :reader this-of))
+(defclass iunknown ()
+  ((this :initarg :this :reader this-of)
+   (this-struct :initform '%iunknown :reader struct-of)
+   (this-vtable :initform '%iunknown-vtable :reader vtable-of)))
 
 (defgeneric function-for-symbol (iunknown symbol)
-  "Return pointer to function with same name as symbol"
+  (:documentation "Return pointer to function with same name as symbol")
   (:method ((iunknown iunknown) symbol)
     (foreign-slot-value
-     (foreign-slot-value (this-of iunknown) '%iunknown 'vtable)
-     '%iunknown-vtable symbol)))
+     (foreign-slot-value (this-of iunknown) (struct-of iunknown) 'vtable)
+     (vtable-of iunknown) symbol)))
 
 (defgeneric query-interface (iunknown iface-guid)
-  "Return pointer to interface."
+  (:documentation "Return pointer to interface.")
   (:method ((iunknown iunknown) (iface-guid string))
     (let* ((iface-pointer (foreign-alloc :pointer))
 	   (this (this-of iunknown))
@@ -36,10 +38,14 @@
       (with-string-as-guid (iface-guid guid)
        (foreign-funcall-pointer func ()
 				:pointer this
-				'guid guid
+				guid guid
 				:pointer iface-pointer
-				'hresult )))))
+				hresult )))))
 
 (defmethod initialize-instance :after ((iunknown iunknown) &key)
   (let* ((this (this-of iunknown))
-	 (frelease ()))))
+	 (frelease (function-for-symbol 'release)))
+    (tg:FINALIZE iunknown #'(lambda ()
+			      (foreign-funcall-pointer frelease this)
+			      (foreign-free this)))))
+
