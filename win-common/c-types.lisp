@@ -33,3 +33,19 @@
 
 (defctype hresult :ulong)
 (defctype byte :uint8)
+
+(defctype date :double)
+
+(defctype BSTR :pointer)
+(defctype scode :long)
+
+(defcstruct EXCEPINFO
+  (wCode  WORD)
+  (wReserved  WORD)
+  (bstrSource  BSTR)
+  (bstrDescription  BSTR)
+  (bstrHelpFile  BSTR)
+  (dwHelpContext DWORD)
+  (pvReserved :pointer)
+  (pfnDeferredFillIn :pointer) ;HRESULT (__stdcall *pfnDeferredFillIn)(struct tagEXCEPINFO *)
+  (scode SCODE))

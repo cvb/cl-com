@@ -44,8 +44,8 @@
 
 (defmethod initialize-instance :after ((iunknown iunknown) &key)
   (let* ((this (this-of iunknown))
-	 (frelease (function-for-symbol 'release)))
+	 (frelease (function-for-symbol iunknown 'release)))
     (tg:FINALIZE iunknown #'(lambda ()
-			      (foreign-funcall-pointer frelease this)
+			      (foreign-funcall-pointer frelease () :pointer this hresult)
 			      (foreign-free this)))))
 

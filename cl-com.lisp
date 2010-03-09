@@ -1,7 +1,18 @@
 (defpackage :cl-com
-  (:use :cl :cffi :iterate))
+  (:use :cl :cffi :iterate :local-time))
 
 (in-package :cl-com)
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (mapcan #'(lambda (lib)
+              (cffi:load-foreign-library lib))
+          '("ole32.dll"
+            "oleaut32.dll"
+            "user32.dll"
+            "kernel32.dll"
+            "advapi32.dll")))
+
+
 
 (defun quit (&optional code)
       ;; This group from "clocc-port/ext.lisp"

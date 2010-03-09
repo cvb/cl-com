@@ -55,3 +55,13 @@
        do (setf (mem-aref (foreign-slot-value g 'guid 'last) 'byte i)
 		(elt bytes i)))
     g))
+
+(defcfun ("CLSIDFromProgID" %CLSID-from-prog-id) hresult
+  "Convert GUID string representation to struct guid"
+  (prog-id-as-string (:string :encoding :utf-16))
+  (guid-as-struct (:pointer guid)))
+
+(defcfun ("CLSIDFromString" %CLSID-from-string) hresult
+  "Convert GUID string representation to struct guid"
+  (guid-as-string (:string :encoding :utf-16))
+  (guid-as-struct (:pointer guid)))
