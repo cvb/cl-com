@@ -161,3 +161,7 @@
 (defun lisp->bstr (lisp)
   (with-ole-str (ole-str lisp)
     (SysAllocString ole-str)))
+
+(cffi:defcfun ("CLSIDFromProgID" clsid-from-prog-id) HRESULT
+  (spszProgID :string)
+  (pclsid :pointer))

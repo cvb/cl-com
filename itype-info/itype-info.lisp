@@ -33,12 +33,17 @@
   ((this-struct :initform '%itype-info :reader struct-of)
    (this-vtable :initform '%itype-info-vtable :reader vtable-of)))
 
-(defgeneric get-ref-type-info (itype-info)
-  (:method ((itype-info itype-info))
+(defgeneric get-ref-type-info (itype-info ref-type)
+  (:method ((itype-info itype-info) ref-type)
     (let ((this (this-of itype-info))
+	  (it-info (make-instance 'itype-info))
 	  (fpointer
 	   (function-for-symbol itype-info get-ref-type-info)))
-      (when (next-method-p get-ref-type-info) (call-next-method)))))
+      (foreign-funcall-pointer fpointer (:convention :stdcall)
+			       :pointer this
+			       :ulong ref-type
+			       :pointer (this-of it-info))
+      it-info)))
 
 (defgeneric get-mops (itype-info)
   (:method ((itype-info itype-info))
@@ -87,13 +92,22 @@
 	  (fpointer (function-for-symbol itype-info get-var-desc)))
       (when (next-method-p get-var-desc) (call-next-method)))))
 
-(defgeneric get-documentation
-    (itype-info)
-  (:method ((itype-info itype-info))
+(defgeneric get-documentation (itype-info id)
+  (:method ((itype-info itype-info) id)
     (let ((this (this-of itype-info))
 	  (fpointer
 	   (function-for-symbol itype-info get-documentation)))
-      (when (next-method-p get-documentation) (call-next-method)))))
+      (with-foreign-object (name :pointer)
+	(foreign-funcall-pointer fpointer (:convention :stdcall)
+				 :pointer this
+				 :int id
+				 :pointer name
+				 :pointer (null-pointer)
+				 :int 0
+				 :pointer (null-pointer))
+	(let ((lname (bstr->lisp name)))
+	  (SysFreeString name)
+	  lname)))))
 
 (defgeneric get-ref-type-of-impl-type
     (itype-info)
@@ -168,12 +182,12 @@
 	   (function-for-symbol itype-info get-ids-of-names)))
       (when (next-method-p get-ids-of-names) (call-next-method)))))
 
-(defgeneric get-type-attr
-    (itype-info)
-  (:method ((itype-info itype-info))
-    (let ((this (this-of itype-info))
-	  (fpointer (function-for-symbol itype-info get-type-attr)))
-      (when (next-method-p get-type-attr) (call-next-method)))))
+;; (defgeneric get-type-attr
+;;     (itype-info)
+;;   (:method ((itype-info itype-info))
+;;     (let ((this (this-of itype-info))
+;; 	  (fpointer (function-for-symbol itype-info get-type-attr)))
+;;       (  ))))
 
 (defgeneric query-interface
     (itype-info)
@@ -198,3 +212,5 @@
     (let ((this (this-of itype-info))
 	  (fpointer (function-for-symbol itype-info addref)))
       (when (next-method-p addref) (call-next-method)))))
+
+;;; Not actual com-method
