@@ -24,12 +24,12 @@
   ((this-struct :initform '%itype-lib :reader struct-of)
    (this-vtable :initform '%itype-lib-vtable :reader vtable-of)))
 
-(defgeneric release
-    (itype-lib)
-  (:method ((itype-lib itype-lib))
-    (let ((this (this-of itype-lib))
-	  (fpointer (function-for-symbol itype-lib 'release)))
-      (when (next-method-p release) (call-next-method)))))
+;; (defgeneric release
+;;     (itype-lib)
+;;   (:method ((itype-lib itype-lib))
+;;     (let ((this (this-of itype-lib))
+;; 	  (fpointer (function-for-symbol itype-lib 'release)))
+;;       (when (next-method-p release) (call-next-method)))))
 
 (defgeneric get-lib-attr
     (itype-lib)
@@ -46,7 +46,8 @@
 	   (hres (foreign-funcall-pointer fpointer (:convention :stdcall)
 					  :pointer this
 					  :uint index
-					  :pointer itypeinfo-ptr-ptr)))
+					  :pointer itypeinfo-ptr-ptr
+					  hresult)))
       (if (= 0 hres)
 	  (make-instance 'itype-info :this (mem-ref itypeinfo-ptr-ptr :pointer))
 	  (progn
@@ -66,17 +67,18 @@
     (let ((this (this-of itype-lib))
 	  (fpointer
 	   (function-for-symbol itype-lib 'get-documentation)))
-      ((with-foreign-object (name :pointer)
+      (with-foreign-object (name :pointer)
 	(foreign-funcall-pointer fpointer (:convention :stdcall)
 				 :pointer this
 				 :int id
 				 :pointer name
 				 :pointer (null-pointer)
 				 :int 0
-				 :pointer (null-pointer))
+				 :pointer (null-pointer)
+				 hresult)
 	(let ((lname (bstr->lisp name)))
 	  (SysFreeString name)
-	  lname))))))
+	  lname)))))
 
 (defgeneric find-name
     (itype-lib)
@@ -84,12 +86,12 @@
     (let ((this (this-of itype-lib))
 	  (fpointer (function-for-symbol itype-lib 'find-name)))
       (when (next-method-p find-name) (call-next-method)))))
-(defgeneric add-ref
-    (itype-lib)
-  (:method ((itype-lib itype-lib))
-    (let ((this (this-of itype-lib))
-	  (fpointer (function-for-symbol itype-lib 'add-ref)))
-      (when (next-method-p add-ref) (call-next-method)))))
+;; (defgeneric add-ref
+;;     (itype-lib)
+;;   (:method ((itype-lib itype-lib))
+;;     (let ((this (this-of itype-lib))
+;; 	  (fpointer (function-for-symbol itype-lib 'add-ref)))
+;;       (when (next-method-p add-ref) (call-next-method)))))
 (defgeneric get-type-comp
     (itype-lib)
   (:method ((itype-lib itype-lib))
@@ -124,10 +126,10 @@
 	  (fpointer
 	   (function-for-symbol itype-lib 'release-tlib-attr)))
       (when (next-method-p release-tlib-attr) (call-next-method)))))
-(defgeneric query-interface
-    (itype-lib)
-  (:method ((itype-lib itype-lib))
-    (let ((this (this-of itype-lib))
-	  (fpointer
-	   (function-for-symbol itype-lib 'query-interface)))
-      (when (next-method-p query-interface) (call-next-method)))))
+;; (defgeneric query-interface
+;;     (itype-lib)
+;;   (:method ((itype-lib itype-lib))
+;;     (let ((this (this-of itype-lib))
+;; 	  (fpointer
+;; 	   (function-for-symbol itype-lib 'query-interface)))
+;;       (when (next-method-p query-interface) (call-next-method)))))
