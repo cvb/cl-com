@@ -31,7 +31,6 @@
     (:vt_uint :uint)
     (:vt_void :void)
     (:vt_hresult 'hresult)
-    (:vt_ptr :pointer)
     (:vt_safearray :safearray)
     (:vt_carray :array)
     (:vt_userdefined :userdefined)
@@ -42,11 +41,13 @@
     (:vt_uint_ptr '(:pointer :uint))
     (:vt_clsid 'guid)
     (:vt_typemask :typemask)
-    (t (error "unknows type"))))
+    (t vartype)))
 
 (defun decode-typedesc (iinfo typedesc)
   (let ((result nil)
-	(var-type (foreign-slot-value typedesc 'typedesc 'vt))
+	(var-type (foreign-enum-keyword 'varenum
+					(logand #x0fff
+						(foreign-slot-value typedesc 'typedesc 'vt))))
 	(actual-desc (foreign-slot-value typedesc 'typedesc 'typedesc-union)))
     (case var-type
       (:vt_ptr (let ((type (decode-typedesc iinfo  actual-desc)))
@@ -56,6 +57,90 @@
 			(bounds-ptr (foreign-slot-pointer actual-desc 'arraydesc 'rgbounds)))
 		    `(:array ,elem-type ,(iterate (for i to dims)
 						  (collect (mem-aref bounds-ptr elem-type i))))))
-      (:vt_userdefined (let ((ref-type-info (get-ref-type-info iinfo)))
-			 (get-documentation ref-type-info)))
+      (:vt_userdefined (let ((ref-type-info (get-ref-type-info iinfo
+							       (foreign-slot-value actual-desc
+										   'typedesc-union
+										   'hreftype))))
+			 (get-documentation ref-type-info -1)))
       (t (decode-vartype var-type)))))
+
+(defun decode-vardesc (itype-info var-desc)
+  (let* ((var-kind (foreign-slot-value var-desc 'vardesc 'var-kind))
+	 (id (foreign-slot-value var-desc 'vardesc 'member-id))
+	 (name (get-documentation itype-info id))
+	 (tdesc (foreign-slot-value
+		 (foreign-slot-value var-desc 'vardesc 'elemdesc)
+		 'elementdesc 'tdesc))
+	 (type (decode-typedesc itype-info tdesc))
+	 (constp (eql var-kind :var_const))
+	 (value (when constp (variant-value (foreign-slot-value
+					     (foreign-slot-value var-desc 'vardesc 'vardesc-union)
+					     'vardesc-union 'value)))))
+    `(,(when constp :const) ,name ,type ,(when constp value))))
+
+(defun decode-enum-vars (type-info)
+  (let* ((type-attr (get-type-attr type-info))
+	 (vars (foreign-slot-value type-attr 'typeattr 'vars)))
+    (iterate (for i from 0 to (- vars 1))
+	     (collect (decode-vardesc type-info (get-var-desc type-info i)))
+	     (release-var-desc type-info i))))
+
+(defun decode-function-params (type-info func-desc))
+  ;; (let ((params (foreign-slot-value func-desc 'funcdesc 'params))
+  ;; 	(desc-params-ptr (foreign-slot-value func-desc 'funcdesc 'element-desc-param)))
+  ;;   (when (> params 0)
+  ;;     ;(iterate (for i from 0 to (- params 1))
+  ;; 					;(format t "~&i: ~a~%" i)
+  ;;     ;(collect
+  ;;     (decode-typedesc type-info
+  ;; 		       (foreign-slot-value desc-params-ptr ;(mem-aref desc-params-ptr 'elementdesc i);
+  ;; 					   'elementdesc 'tdesc))))) ;))
+
+(defun decode-function (type-info func-desc)
+  (let* ((dispid (foreign-slot-value func-desc 'funcdesc 'member-id))
+	 (name (get-documentation type-info dispid))
+	 (inv-kind (foreign-slot-value func-desc 'funcdesc 'inv-kind))
+	 (cc-raw (foreign-slot-value func-desc 'funcdesc 'call-conv))
+	 (call-conv (case cc-raw
+		      (:cc_cdecl :cdecl)
+		      (:cc_stdcall :stdcall)
+		      (t cc-raw)))
+	 (addr-of-member (address-of-member type-info dispid inv-kind))
+	 (func-kind (foreign-slot-value func-desc 'funcdesc 'funckind))
+	 (vft (foreign-slot-value func-desc 'funcdesc 'o-vft))
+	 (retval-raw (foreign-slot-value
+		      (foreign-slot-value func-desc 'funcdesc 'elem-desc-func)
+		      'elementdesc 'tdesc))
+	 (retval (decode-typedesc type-info retval-raw)))
+    `(,name (:dispid ,dispid)
+	    (:addr ,addr-of-member)
+	    (:convention ,call-conv)
+	    (:func-kind ,func-kind ,(when (eql func-kind :func_virtual) vft))
+	    (:retval ,retval)
+	    (:inv-kind ,inv-kind)
+	    (,(decode-function-params type-info func-desc)))))
+
+(defun decode-dispatch (type-info)
+  (let* ((type-attr (get-type-attr type-info))
+	 (funs (foreign-slot-value type-attr 'typeattr 'funcs)))
+    (iterate (for i from 0 to (- funs 1))
+	     (collect (decode-function type-info (get-func-desc type-info i)))
+	     (release-func-desc type-info i))))
+
+(defun decode-object (type-lib n)
+  (let* ((type-info (get-type-info type-lib n))
+	 (type-attr (get-type-attr type-info))
+	 (doc (get-documentation type-lib n))
+	 (guid (foreign-slot-value type-attr 'typeattr 'guid))
+	 (type-kind (foreign-slot-value type-attr 'typeattr 'type-kind)))
+    (case type-kind
+      (:tkind_alias `(:alias ,doc  ,(decode-typedesc type-info (foreign-slot-value type-attr 'typeattr 'tdesc-alias))))
+      (:tkind_enum `(:enum ,doc ,(decode-enum-vars type-info)))
+      (:tkind_dispatch `(:dispatch ,doc :guid ,(guid-to-string guid) ,(decode-dispatch type-info)))
+      (:tkind_coclass `(:coclass ,doc :guid ,(guid-to-string guid)))
+      (t `(,type-kind)))))
+
+(defun decode-type-lib (type-lib)
+  (let ((count (get-type-info-count type-lib)))
+    (iterate (for i from 0 to (- count 1))
+	     (collect (decode-object type-lib i)))))

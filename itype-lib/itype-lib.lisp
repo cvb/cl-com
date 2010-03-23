@@ -62,23 +62,25 @@
 	   (function-for-symbol itype-lib 'get-type-info-type)))
       (when (next-method-p get-type-info-type) (call-next-method)))))
 
-(defgeneric get-documentation (itype-lib id)
-  (:method ((itype-lib itype-lib) id)
-    (let ((this (this-of itype-lib))
-	  (fpointer
-	   (function-for-symbol itype-lib 'get-documentation)))
-      (with-foreign-object (name :pointer)
-	(foreign-funcall-pointer fpointer (:convention :stdcall)
-				 :pointer this
-				 :int id
-				 :pointer name
-				 :pointer (null-pointer)
-				 :int 0
-				 :pointer (null-pointer)
-				 hresult)
-	(let ((lname (bstr->lisp name)))
-	  (SysFreeString name)
-	  lname)))))
+
+(defmethod get-documentation ((itype-lib itype-lib) id)
+  (let ((this (this-of itype-lib))
+	(fpointer
+	 (function-for-symbol itype-lib 'get-documentation)))
+    (with-foreign-object (name :pointer)
+      (let ((hres (foreign-funcall-pointer fpointer (:convention :stdcall)
+					   :pointer this
+					   :int id
+					   :pointer name
+					   :pointer (null-pointer)
+					   :int 0
+					   :pointer (null-pointer)
+					   hresult)))
+	(if (not (= 0 hres))
+	    hres
+	    (let ((lname (bstr->lisp (mem-ref name :pointer))))
+	      (SysFreeString (mem-ref name :pointer))
+	      lname))))))
 
 (defgeneric find-name
     (itype-lib)

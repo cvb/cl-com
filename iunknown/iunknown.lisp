@@ -49,3 +49,4 @@
 			      (foreign-funcall-pointer frelease () :pointer this hresult)
 			      (foreign-free this)))))
 
+(defgeneric get-documentation (iunknown id))

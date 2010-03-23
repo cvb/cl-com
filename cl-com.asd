@@ -26,7 +26,8 @@
 			:components ((:file "itype-info"
 					    :depends-on ("itype-info-structs-and-enums"))
 				     (:file "itype-info-structs-and-enums")
-				     (:file "helper-functions")))
+				     (:file "helper-functions"
+					    :depends-on ("itype-info-structs-and-enums" "itype-info"))))
 	       (:module itype-lib
 			:depends-on (win-common iunknown itype-info)
 			:components ((:file "itype-lib")
@@ -35,4 +36,5 @@
 	       (:module com-main-functions
 			:depends-on (win-common)
 			:components ((:file "init-funs")
-				     (:file "helper-functions")))))
+				     (:file "helper-functions")
+				     (:file "com-variant")))))

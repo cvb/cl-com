@@ -49,3 +49,7 @@
   (pvReserved :pointer)
   (pfnDeferredFillIn :pointer) ;HRESULT (__stdcall *pfnDeferredFillIn)(struct tagEXCEPINFO *)
   (scode SCODE))
+
+(defctype VARTYPE :unsigned-short)
+(defctype VARIANT_BOOL :short)
+(defctype LONGLONG :int64)

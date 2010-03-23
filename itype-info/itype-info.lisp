@@ -33,20 +33,21 @@
   ((this-struct :initform '%itype-info :reader struct-of)
    (this-vtable :initform '%itype-info-vtable :reader vtable-of)
    (type-attr :initform nil :accessor type-attr-of)
-   (func-desc :initform nil :accessor func-desc-of)))
+   (func-desc :initform nil :accessor func-desc-of)
+   (var-desc :initform nil :accessor var-desc-of)))
 
 (defgeneric get-ref-type-info (itype-info ref-type)
   (:method ((itype-info itype-info) ref-type)
     (let ((this (this-of itype-info))
-	  (it-info (make-instance 'itype-info))
+	  (it-info (foreign-alloc :pointer))
 	  (fpointer
 	   (function-for-symbol itype-info 'get-ref-type-info)))
       (foreign-funcall-pointer fpointer (:convention :stdcall)
 			       :pointer this
 			       :ulong ref-type
-			       :pointer (this-of it-info)
+			       :pointer it-info
 			       hresult)
-      it-info)))
+      (make-instance 'itype-info :this (mem-ref it-info :pointer)))))
 
 (defgeneric get-mops (itype-info)
   (:method ((itype-info itype-info))
@@ -69,43 +70,74 @@
     (let ((this (this-of itype-info))
 	  (fpointer (function-for-symbol itype-info 'get-names))))))
 
-(defgeneric address-of-member
-    (itype-info)
-  (:method ((itype-info itype-info))
+(defgeneric address-of-member (itype-info id inv-kind)
+  (:method ((itype-info itype-info) id inv-kind)
     (let ((this (this-of itype-info))
+	  (ptr (foreign-alloc :pointer))
 	  (fpointer
-	   (function-for-symbol itype-info 'address-of-member))))))
+	   (function-for-symbol itype-info 'address-of-member)))
+      (let ((hres (foreign-funcall-pointer fpointer (:convention :stdcall)
+					   :pointer this
+					   :int32 id
+					   invokekind inv-kind
+					   :pointer ptr
+					   hresult)))
+	(if (not (= 0 hres))
+	    `(:hres ,hres)
+	    `(:ptr ,(mem-ref ptr :pointer)))))))
 
-(defgeneric release-var-desc
-    (itype-info)
-  (:method ((itype-info itype-info))
+(defgeneric release-var-desc (itype-info index)
+  (:method ((itype-info itype-info) index)
     (let ((this (this-of itype-info))
+	  (ptr (cadr (find-if #'(lambda (x)
+				    (if (= index (car x)) t nil))
+				(var-desc-of itype-info))))
 	  (fpointer
-	   (function-for-symbol itype-info 'release-var-desc))))))
+	   (function-for-symbol itype-info 'release-var-desc)))
+      (foreign-funcall-pointer fpointer (:convention :stdcall)
+			       :pointer this
+			       :pointer ptr
+			       hresult)
+      (setf (var-desc-of itype-info) (remove ptr (var-desc-of itype-info))))))
 
-(defgeneric get-var-desc
-    (itype-info)
-  (:method ((itype-info itype-info))
+(defgeneric get-var-desc (itype-info index)
+  (:method ((itype-info itype-info) index)
     (let ((this (this-of itype-info))
-	  (fpointer (function-for-symbol itype-info 'get-var-desc))))))
+	  (ptr-ptr (foreign-alloc :pointer))
+	  (fpointer (function-for-symbol itype-info 'get-var-desc)))
+      (when (= 0
+	       (foreign-funcall-pointer fpointer (:convention :stdcall)
+					:pointer this
+					:uint index
+					:pointer ptr-ptr
+					hresult))
+	(push (list index (mem-ref ptr-ptr :pointer)) (var-desc-of itype-info))
+	(mem-ref ptr-ptr :pointer)))))
 
-(defgeneric get-documentation (itype-info id)
-  (:method ((itype-info itype-info) id)
-    (let ((this (this-of itype-info))
-	  (fpointer
-	   (function-for-symbol itype-info 'get-documentation)))
-      (with-foreign-object (name :pointer)
-	(foreign-funcall-pointer fpointer (:convention :stdcall)
-				 :pointer this
-				 :int id
-				 :pointer name
-				 :pointer (null-pointer)
-				 :int 0
-				 :pointer (null-pointer)
-				 hresult)
-	(let ((lname (bstr->lisp name)))
-	  (SysFreeString name)
-	  lname)))))
+
+(defmethod get-documentation ((itype-info itype-info) id)
+  (let ((this (this-of itype-info))
+	(fpointer
+	 (function-for-symbol itype-info 'get-documentation)))
+    (with-foreign-object (name :pointer)
+      (let ((hres (foreign-funcall-pointer fpointer (:convention :stdcall)
+					   :pointer this
+					   :int id
+					   :pointer name
+					   :pointer (null-pointer)
+					   :int 0
+					   :pointer (null-pointer)
+					   hresult)))
+	(if (not (= 0 hres))
+	    hres
+	    (let ((lname (bstr->lisp (mem-ref name :pointer))))
+	      (SysFreeString (mem-ref name :pointer))
+	      lname))))))
+
+
+	;; (let ((lname (bstr->lisp name)))
+	;;   (SysFreeString name)
+	;;   lname)))))
 
 (defgeneric get-ref-type-of-impl-type
     (itype-info)

@@ -151,7 +151,11 @@
             finally (setf (cffi:mem-aref ,var :unsigned-short ,len) 0))
          ,@body))))
 
+
 (defun bstr->lisp (bstr)
+;  (let ((*default-foreign-encoding* :utf-16))
+;    (foreign-string-to-lisp bstr :encoding :utf-16)))
+
   (with-output-to-string (out)
     (loop for i from 0
        for *ptr = (cffi:mem-aref bstr 'WORD i)

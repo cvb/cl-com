@@ -52,7 +52,8 @@
   (:VT_RESERVED #x8000)
   (:VT_ILLEGAL #xffff)
   (:VT_ILLEGALMASKED #xfff)
-  (:VT_TYPEMASK #xfff))
+  (:VT_TYPEMASK #xfff)
+)
     
 (defcunion typedesc-union
   (typedesc :pointer)
@@ -70,7 +71,7 @@
   ;; /* VT_USERDEFINED - this is used to get a TypeInfo for the UDT*/
   ;; HREFTYPE hreftype		;
   (typedesc-union typedesc-union)
-  (vt varenum))
+  (vt :ushort))
 
 (defcstruct SAFEARRAYBOUND 
   (celements :ulong)	;
@@ -125,7 +126,7 @@
   (paramdesc paramdesc))
 
 (defcstruct ELEMENTDESC
-  (tdesk typedesc)
+  (tdesc typedesc)
   (un-type elemdesc-union))
 
 (defcenum funckind
@@ -176,3 +177,22 @@
   (scodes :short) ;; Count of permitted return values. 
   (elem-desc-func elementdesc) ;; Contains the return type of the function.
   (func-flags word)) ;; Definition of flags follows.
+
+(defcenum varkind
+  :VAR_PERINSTANCE
+  :VAR_STATIC
+  :VAR_CONST
+  :VAR_DISPATCH)
+
+(defcunion vardesc-union
+  (oinst :ulong)
+  (value :pointer))
+
+(defcstruct vardesc
+  (member-id :int32)
+  (schema :pointer) ;; reserved
+  (vardesc-union vardesc-union)
+  (elemdesc elementdesc)
+  (flags :ushort)
+  (var-kind varkind))
+

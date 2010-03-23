@@ -65,3 +65,9 @@
   "Convert GUID string representation to struct guid"
   (guid-as-string (:string :encoding :utf-16))
   (guid-as-struct (:pointer guid)))
+
+(defun guid-to-string (guid)
+  (with-foreign-slots ((first-8 first-4 second-4 last) guid guid)
+    (let ((last-lisp (iterate (for i from 0 to 7)
+			      (collect (mem-aref last 'byte i)))))
+      (format nil "~8,'0x-~4,'0x-~4,'0x-~{~2,'0x~2,'0x-~2,'0x~2,'0x~2,'0x~2,'0x~2,'0x~2,'0x~}" first-8 first-4 second-4 last-lisp))))
